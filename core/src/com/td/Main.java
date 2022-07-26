@@ -2,58 +2,98 @@ package com.td;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
 
 import java.util.ArrayList;
 import java.util.Random;
 
+/*
+* TODO: CLASS GOALS
+* - Zombie Type Variety
+* - Balance
+* - Building APK
+* - Fun stuff (tiles, tooltips)
+* */
+
 public class Main extends ApplicationAdapter {
+	//Utility
 	SpriteBatch batch;
-	static Random r = new Random();
-	static ArrayList<Enemy> enemies = new ArrayList<>();
-	static ArrayList<Cannon> cannons = new ArrayList<>();
+	OrthographicCamera camera;
+
+	//Scenes
+	static Scene start;
+	static Scene game;
+	static Scene gameOver;
+
+	//Control
+	static boolean started = false, gameover = false;
+	enum scene {
+		START,
+		GAME,
+		GAMEOVER
+	}
+	static scene which;
 
 	@Override
 	public void create () {
 		batch = new SpriteBatch();
-	}
-
-	void update(){
-		tap();
-		spawn_zombies();
-		for(Enemy e : enemies) e.update();
-		for(Cannon c : cannons) c.update();
-		tidy();
+		camera = new OrthographicCamera();
+		camera.setToOrtho(false, Game.gw, Game.gh);
+		start = new Start();
+		game = new Game();
+		gameOver = new GameOver();
+		which = scene.START;
 	}
 
 	void tap(){
 		if(!Gdx.input.justTouched()) return;
-		int x = Gdx.input.getX(), y = Gdx.graphics.getHeight() - Gdx.input.getY();
-		cannons.add(new Cannon("cannon", x, y));
+		Vector3 v = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+		camera.unproject(v);
+		int x = (int)v.x, y = (int)v.y;
+
+		switch(which){
+			case START:
+				start.tap(x, y);
+				break;
+			case GAME:
+				game.tap(x, y);
+				break;
+			case GAMEOVER:
+				gameOver.tap(x, y);
+				break;
+		}
 	}
 
-	void tidy(){
-		for(Enemy e : enemies) if(!e.active) { enemies.remove(e); break; }
-		for(Cannon c : cannons) if(!c.active) { cannons.remove(c); break; }
-	}
 
-	void spawn_zombies(){
-		if(!enemies.isEmpty()) return;
-		for(int i = 0; i < 3; i++) enemies.add(new Enemy("basic", 1024 + (40 * enemies.size()), r.nextInt(550)));
-	}
 
 	@Override
 	public void render () {
-		update();
+		tap();
 		ScreenUtils.clear(0, 0.5f, 0.5f, 1);
+		camera.update();
+		batch.setProjectionMatrix(camera.combined); //This is for visual scaling
 		batch.begin();
-		batch.draw(new Texture("bg_lab.png"), 0, 0);
-		for(Enemy e : enemies) e.draw(batch);
-		for(Cannon c : cannons) c.draw(batch);
+
+		switch(which){
+			case START:
+				start.draw(batch);
+				break;
+			case GAME:
+				game.draw(batch);
+				break;
+			case GAMEOVER:
+				gameOver.draw(batch);
+				break;
+		}
+
 		batch.end();
 	}
+
+
 	
 	@Override
 	public void dispose () {
